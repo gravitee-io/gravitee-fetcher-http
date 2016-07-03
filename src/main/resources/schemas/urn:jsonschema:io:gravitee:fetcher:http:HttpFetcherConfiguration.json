@@ -1,0 +1,14 @@
+{
+  "type": "object",
+  "title": "http",
+  "properties": {
+    "url": {
+      "title": "URL",
+      "description": "Url to the file you want to fetch",
+      "type": "string"
+    }
+  },
+  "required": [
+    "url"
+  ]
+}
