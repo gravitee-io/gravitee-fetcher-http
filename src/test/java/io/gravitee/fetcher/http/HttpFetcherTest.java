@@ -15,7 +15,9 @@
  */
 package io.gravitee.fetcher.http;
 
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import io.gravitee.fetcher.api.FetcherException;
+import org.junit.Rule;
 import org.junit.Test;
 
 import java.io.BufferedReader;
@@ -24,6 +26,8 @@ import java.io.InputStreamReader;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 /**
  * @author Nicolas GERAUD (nicolas <AT> graviteesource.com)
@@ -31,10 +35,18 @@ import static org.assertj.core.api.Assertions.fail;
  */
 public class HttpFetcherTest {
 
+    @Rule
+    public WireMockRule wireMockRule = new WireMockRule(wireMockConfig().dynamicPort());
+
     @Test
     public void shouldGetExistingFile() throws Exception {
+        stubFor(get(urlEqualTo("/resource/to/fetch"))
+                .willReturn(aResponse()
+                        .withStatus(200)
+                        .withBody("Gravitee.io is awesome!")));
+
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
-        httpFetcherConfiguration.setUrl("https://gravitee.io/LICENSE.txt");
+        httpFetcherConfiguration.setUrl("http://localhost:" + wireMockRule.port() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
         InputStream is = httpFetcher.fetch();
         assertThat(is).isNotNull();
@@ -46,13 +58,16 @@ public class HttpFetcherTest {
             assertThat(line).isNotNull();
         }
         br.close();
-        assertThat(content).contains("Apache License");
+        assertThat(content).contains("awesome");
     }
 
     @Test
     public void shouldGetInexistingFile() throws Exception {
+        stubFor(get(urlEqualTo("/resource/to/fetch"))
+                .willReturn(aResponse()
+                        .withStatus(404)));
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
-        httpFetcherConfiguration.setUrl("https://gravitee.io/LICENSE.tt");
+        httpFetcherConfiguration.setUrl("http://localhost:" + wireMockRule.port() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
         InputStream is = null;
         try {
