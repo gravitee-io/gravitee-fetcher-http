@@ -17,6 +17,7 @@ package io.gravitee.fetcher.http;
 
 import com.github.tomakehurst.wiremock.junit.WireMockRule;
 import io.gravitee.fetcher.api.FetcherException;
+import io.vertx.core.Vertx;
 import org.junit.Rule;
 import org.junit.Test;
 
@@ -24,10 +25,10 @@ import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
 
+import static com.github.tomakehurst.wiremock.client.WireMock.*;
+import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
-import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
-import static com.github.tomakehurst.wiremock.client.WireMock.*;
 
 /**
  * @author Nicolas GERAUD (nicolas <AT> graviteesource.com)
@@ -48,6 +49,7 @@ public class HttpFetcherTest {
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
         httpFetcherConfiguration.setUrl("http://localhost:" + wireMockRule.port() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
+        httpFetcher.setVertx(Vertx.vertx());
         InputStream is = httpFetcher.fetch();
         assertThat(is).isNotNull();
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
@@ -69,6 +71,7 @@ public class HttpFetcherTest {
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
         httpFetcherConfiguration.setUrl("http://localhost:" + wireMockRule.port() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
+        httpFetcher.setVertx(Vertx.vertx());
         InputStream is = null;
         try {
             is = httpFetcher.fetch();
