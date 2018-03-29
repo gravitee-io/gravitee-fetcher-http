@@ -61,11 +61,11 @@ public class HttpFetcher implements Fetcher {
         try {
             Buffer buffer = fetchContent().join();
             if (buffer == null) {
-                throw new FetcherException("Unable to fetch '" + httpFetcherConfiguration.getUrl() + "': no content", null);
+                throw new FetcherException("Unable to fetch Http content '" + httpFetcherConfiguration.getUrl() + "': no content", null);
             }
             return new ByteArrayInputStream(buffer.getBytes());
         } catch (Exception ex) {
-            throw new FetcherException("Unable to fetch '" + httpFetcherConfiguration.getUrl() + "'", ex);
+            throw new FetcherException("Unable to fetch Http content (" + ex.getMessage() + ")", ex);
         }
     }
 
