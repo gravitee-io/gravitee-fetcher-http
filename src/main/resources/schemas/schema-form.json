@@ -6,6 +6,11 @@
       "title": "URL",
       "description": "Url to the file you want to fetch",
       "type": "string"
+    },
+    "useSystemProxy": {
+      "title": "Use system proxy",
+      "description": "Use the system proxy configured by your administrator.",
+      "type": "boolean"
     }
   },
   "required": [

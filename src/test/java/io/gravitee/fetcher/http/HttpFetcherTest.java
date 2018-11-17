@@ -20,6 +20,7 @@ import io.gravitee.fetcher.api.FetcherException;
 import io.vertx.core.Vertx;
 import org.junit.Rule;
 import org.junit.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.io.BufferedReader;
 import java.io.InputStream;
@@ -49,6 +50,7 @@ public class HttpFetcherTest {
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
         httpFetcherConfiguration.setUrl("http://localhost:" + wireMockRule.port() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
+        ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", 1_000);
         httpFetcher.setVertx(Vertx.vertx());
         InputStream is = httpFetcher.fetch();
         assertThat(is).isNotNull();

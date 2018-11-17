@@ -18,12 +18,14 @@ package io.gravitee.fetcher.http;
 import io.gravitee.fetcher.api.FetcherConfiguration;
 
 /**
- * @author Nicolas GERAUD (nicolas <AT> graviteesource.com)
+ * @author Nicolas GERAUD (nicolas.geraud at graviteesource.com)
  * @author GraviteeSource Team
  */
 public class HttpFetcherConfiguration implements FetcherConfiguration {
 
     private String url;
+
+    private boolean useSystemProxy;
 
     public String getUrl() {
         return url;
@@ -33,4 +35,11 @@ public class HttpFetcherConfiguration implements FetcherConfiguration {
         this.url = url;
     }
 
+    public boolean isUseSystemProxy() {
+        return useSystemProxy;
+    }
+
+    public void setUseSystemProxy(boolean useSystemProxy) {
+        this.useSystemProxy = useSystemProxy;
+    }
 }

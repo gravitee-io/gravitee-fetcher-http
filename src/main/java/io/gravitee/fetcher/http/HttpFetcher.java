@@ -25,9 +25,12 @@ import io.vertx.core.http.HttpClient;
 import io.vertx.core.http.HttpClientOptions;
 import io.vertx.core.http.HttpClientRequest;
 import io.vertx.core.http.HttpMethod;
+import io.vertx.core.net.ProxyOptions;
+import io.vertx.core.net.ProxyType;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.beans.factory.annotation.Value;
 
 import java.io.ByteArrayInputStream;
 import java.io.InputStream;
@@ -36,7 +39,7 @@ import java.util.concurrent.CompletableFuture;
 
 /**
  * @author David BRASSELY (david.brassely at graviteesource.com)
- * @author Nicolas GERAUD (nicolas <AT> graviteesource.com)
+ * @author Nicolas GERAUD (nicolas.geraud at graviteesource.com)
  * @author GraviteeSource Team
  */
 public class HttpFetcher implements Fetcher {
@@ -47,10 +50,32 @@ public class HttpFetcher implements Fetcher {
 
     private HttpFetcherConfiguration httpFetcherConfiguration;
 
+    @Value("${httpClient.timeout:10000}")
+    private int httpClientTimeout;
+    @Value("${httpClient.proxy.type:HTTP}")
+    private String httpClientProxyType;
+
+    @Value("${httpClient.proxy.http.host:#{systemProperties['http.proxyHost'] ?: 'localhost'}}")
+    private String httpClientProxyHttpHost;
+    @Value("${httpClient.proxy.http.port:#{systemProperties['http.proxyPort'] ?: 3128}}")
+    private int httpClientProxyHttpPort;
+    @Value("${httpClient.proxy.http.username:#{null}}")
+    private String httpClientProxyHttpUsername;
+    @Value("${httpClient.proxy.http.password:#{null}}")
+    private String httpClientProxyHttpPassword;
+
+    @Value("${httpClient.proxy.https.host:#{systemProperties['https.proxyHost'] ?: 'localhost'}}")
+    private String httpClientProxyHttpsHost;
+    @Value("${httpClient.proxy.https.port:#{systemProperties['https.proxyPort'] ?: 3128}}")
+    private int httpClientProxyHttpsPort;
+    @Value("${httpClient.proxy.https.username:#{null}}")
+    private String httpClientProxyHttpsUsername;
+    @Value("${httpClient.proxy.https.password:#{null}}")
+    private String httpClientProxyHttpsPassword;
+
     @Autowired
     private Vertx vertx;
 
-    private static final int GLOBAL_TIMEOUT = 10_000;
 
     public HttpFetcher(HttpFetcherConfiguration httpFetcherConfiguration) {
         this.httpFetcherConfiguration = httpFetcherConfiguration;
@@ -81,7 +106,24 @@ public class HttpFetcher implements Fetcher {
                 .setMaxPoolSize(1)
                 .setKeepAlive(false)
                 .setTcpKeepAlive(false)
-                .setConnectTimeout(GLOBAL_TIMEOUT);
+                .setConnectTimeout(httpClientTimeout);
+
+        if (httpFetcherConfiguration.isUseSystemProxy()) {
+            ProxyOptions proxyOptions = new ProxyOptions();
+            proxyOptions.setType(ProxyType.valueOf(httpClientProxyType));
+            if (HTTPS_SCHEME.equals(requestUri.getScheme())) {
+                proxyOptions.setHost(httpClientProxyHttpsHost);
+                proxyOptions.setPort(httpClientProxyHttpsPort);
+                proxyOptions.setUsername(httpClientProxyHttpsUsername);
+                proxyOptions.setPassword(httpClientProxyHttpsPassword);
+            } else {
+                proxyOptions.setHost(httpClientProxyHttpHost);
+                proxyOptions.setPort(httpClientProxyHttpPort);
+                proxyOptions.setUsername(httpClientProxyHttpUsername);
+                proxyOptions.setPassword(httpClientProxyHttpPassword);
+            }
+            options.setProxyOptions(proxyOptions);
+        }
 
         final HttpClient httpClient = vertx.createHttpClient(options);
 
@@ -96,7 +138,7 @@ public class HttpFetcher implements Fetcher {
                     requestUri.toString()
             );
 
-            request.setTimeout(GLOBAL_TIMEOUT);
+            request.setTimeout(httpClientTimeout);
 
             request.handler(response -> {
                 if (response.statusCode() == HttpStatusCode.OK_200) {
