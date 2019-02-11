@@ -18,6 +18,7 @@ package io.gravitee.fetcher.http;
 import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.fetcher.api.Fetcher;
 import io.gravitee.fetcher.api.FetcherException;
+import io.gravitee.fetcher.api.Resource;
 import io.gravitee.fetcher.http.vertx.VertxCompletableFuture;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -33,7 +34,6 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 
 import java.io.ByteArrayInputStream;
-import java.io.InputStream;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
 
@@ -82,13 +82,15 @@ public class HttpFetcher implements Fetcher {
     }
 
     @Override
-    public InputStream fetch() throws FetcherException {
+    public Resource fetch() throws FetcherException {
         try {
             Buffer buffer = fetchContent().join();
             if (buffer == null) {
                 throw new FetcherException("Unable to fetch Http content '" + httpFetcherConfiguration.getUrl() + "': no content", null);
             }
-            return new ByteArrayInputStream(buffer.getBytes());
+            final Resource resource = new Resource();
+            resource.setContent(new ByteArrayInputStream(buffer.getBytes()));
+            return resource;
         } catch (Exception ex) {
             throw new FetcherException("Unable to fetch Http content (" + ex.getMessage() + ")", ex);
         }

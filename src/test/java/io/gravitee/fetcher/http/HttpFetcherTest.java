@@ -52,7 +52,7 @@ public class HttpFetcherTest {
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
         ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", 1_000);
         httpFetcher.setVertx(Vertx.vertx());
-        InputStream is = httpFetcher.fetch();
+        InputStream is = httpFetcher.fetch().getContent();
         assertThat(is).isNotNull();
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
         String line;
@@ -76,7 +76,7 @@ public class HttpFetcherTest {
         httpFetcher.setVertx(Vertx.vertx());
         InputStream is = null;
         try {
-            is = httpFetcher.fetch();
+            is = httpFetcher.fetch().getContent();
             fail("should not happen");
         } catch (FetcherException fetcherException) {
             assertThat(fetcherException.getMessage()).contains("Unable to fetch");
