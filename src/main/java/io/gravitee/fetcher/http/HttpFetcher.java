@@ -133,11 +133,14 @@ public class HttpFetcher implements Fetcher {
                 (HTTPS_SCHEME.equals(requestUri.getScheme()) ? 443 : 80);
 
         try {
+            String relativeUri = (requestUri.getRawQuery() == null) ? requestUri.getRawPath() :
+                    requestUri.getRawPath() + '?' + requestUri.getRawQuery();
+
             HttpClientRequest request = httpClient.request(
                     HttpMethod.GET,
                     port,
                     requestUri.getHost(),
-                    requestUri.toString()
+                    relativeUri
             );
 
             request.setTimeout(httpClientTimeout);
