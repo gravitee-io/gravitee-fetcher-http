@@ -137,7 +137,7 @@ public class HttpFetcher implements Fetcher {
                     HttpMethod.GET,
                     port,
                     requestUri.getHost(),
-                    requestUri.toString()
+                    requestUri.getPath()
             );
 
             request.setTimeout(httpClientTimeout);
