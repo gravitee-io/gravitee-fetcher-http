@@ -51,7 +51,7 @@ public class HttpFetcherTest {
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
         httpFetcherConfiguration.setUrl(wireMockRule.baseUrl() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
-        ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", 1_000);
+        ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", 10_000);
         httpFetcher.setVertx(Vertx.vertx());
         InputStream is = httpFetcher.fetch().getContent();
         assertThat(is).isNotNull();
