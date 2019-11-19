@@ -24,7 +24,7 @@
     <parent>
         <groupId>io.gravitee</groupId>
         <artifactId>gravitee-parent</artifactId>
-        <version>15</version>
+        <version>17</version>
     </parent>
 
     <groupId>io.gravitee.fetcher</groupId>
@@ -36,6 +36,7 @@
     <properties>
         <gravitee-fetcher-api.version>1.2.0</gravitee-fetcher-api.version>
         <maven-assembly-plugin.version>2.5.5</maven-assembly-plugin.version>
+        <gravitee-node-api.version>1.4.4-SNAPSHOT</gravitee-node-api.version>
     </properties>
 
     <dependencies>
@@ -44,6 +45,12 @@
             <groupId>io.gravitee.fetcher</groupId>
             <artifactId>gravitee-fetcher-api</artifactId>
             <version>${gravitee-fetcher-api.version}</version>
+            <scope>provided</scope>
+        </dependency>
+        <dependency>
+            <groupId>io.gravitee.node</groupId>
+            <artifactId>gravitee-node-api</artifactId>
+            <version>${gravitee-node-api.version}</version>
             <scope>provided</scope>
         </dependency>
 
@@ -110,7 +117,6 @@
             <version>${spring.version}</version>
             <scope>test</scope>
         </dependency>
-
     </dependencies>
 
     <build>

@@ -15,11 +15,15 @@
  */
 package io.gravitee.fetcher.http;
 
+import io.gravitee.common.http.HttpHeaders;
 import io.gravitee.common.http.HttpStatusCode;
+import io.gravitee.common.utils.UUID;
 import io.gravitee.fetcher.api.Fetcher;
 import io.gravitee.fetcher.api.FetcherException;
 import io.gravitee.fetcher.api.Resource;
 import io.gravitee.fetcher.http.vertx.VertxCompletableFuture;
+import io.gravitee.node.api.Node;
+import io.gravitee.node.api.utils.NodeUtils;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
 import io.vertx.core.http.HttpClient;
@@ -75,6 +79,9 @@ public class HttpFetcher implements Fetcher {
 
     @Autowired
     private Vertx vertx;
+
+    @Autowired
+    private Node node;
 
 
     public HttpFetcher(HttpFetcherConfiguration httpFetcherConfiguration) {
@@ -142,6 +149,8 @@ public class HttpFetcher implements Fetcher {
                     requestUri.getHost(),
                     relativeUri
             );
+            request.putHeader(HttpHeaders.USER_AGENT, NodeUtils.userAgent(node));
+            request.putHeader("X-Gravitee-Request-Id", UUID.toString(UUID.random()));
 
             request.setTimeout(httpClientTimeout);
 
