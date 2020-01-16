@@ -19,6 +19,7 @@ import io.gravitee.common.http.HttpHeaders;
 import io.gravitee.common.http.HttpStatusCode;
 import io.gravitee.common.utils.UUID;
 import io.gravitee.fetcher.api.Fetcher;
+import io.gravitee.fetcher.api.FetcherConfiguration;
 import io.gravitee.fetcher.api.FetcherException;
 import io.gravitee.fetcher.api.Resource;
 import io.gravitee.fetcher.http.vertx.VertxCompletableFuture;
@@ -101,6 +102,11 @@ public class HttpFetcher implements Fetcher {
         } catch (Exception ex) {
             throw new FetcherException("Unable to fetch Http content (" + ex.getMessage() + ")", ex);
         }
+    }
+
+    @Override
+    public FetcherConfiguration getConfiguration() {
+        return httpFetcherConfiguration;
     }
 
     private CompletableFuture<Buffer> fetchContent() {
