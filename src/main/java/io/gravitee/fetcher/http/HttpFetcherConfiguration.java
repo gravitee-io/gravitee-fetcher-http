@@ -27,6 +27,28 @@ public class HttpFetcherConfiguration implements FetcherConfiguration {
 
     private boolean useSystemProxy;
 
+    private String fetchCron;
+
+    private boolean autoFetch = false;
+
+    @Override
+    public String getFetchCron() {
+        return fetchCron;
+    }
+
+    public void setFetchCron(String fetchCron) {
+        this.fetchCron = fetchCron;
+    }
+
+    @Override
+    public boolean isAutoFetch() {
+        return autoFetch;
+    }
+
+    public void setAutoFetch(boolean autoFetch) {
+        this.autoFetch = autoFetch;
+    }
+
     public String getUrl() {
         return url;
     }

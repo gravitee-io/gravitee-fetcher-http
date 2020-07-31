@@ -37,6 +37,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
+import org.springframework.scheduling.support.CronSequenceGenerator;
 
 import java.io.ByteArrayInputStream;
 import java.net.URI;
@@ -91,6 +92,18 @@ public class HttpFetcher implements Fetcher {
 
     @Override
     public Resource fetch() throws FetcherException {
+        if (httpFetcherConfiguration.isAutoFetch() && (httpFetcherConfiguration.getFetchCron() == null || httpFetcherConfiguration.getFetchCron().isEmpty())) {
+            throw new FetcherException("Some required configuration attributes are missing.", null);
+        }
+
+        if (httpFetcherConfiguration.isAutoFetch() && httpFetcherConfiguration.getFetchCron() != null) {
+            try {
+                new CronSequenceGenerator(httpFetcherConfiguration.getFetchCron());
+            } catch (IllegalArgumentException e) {
+                throw new FetcherException("Cron expression is invalid", e);
+            }
+        }
+
         try {
             Buffer buffer = fetchContent().join();
             if (buffer == null) {

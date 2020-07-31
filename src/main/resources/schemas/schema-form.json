@@ -11,9 +11,26 @@
       "title": "Use system proxy",
       "description": "Use the system proxy configured by your administrator.",
       "type": "boolean"
+    },
+    "autoFetch": {
+      "title": "Auto Fetch",
+      "description": "Trigger periodic update",
+      "type": "boolean",
+      "default": false
+    },
+    "fetchCron": {
+      "title": "Update frequency",
+      "description": "Define update frequency using Crontab pattern.<BR><B>Note:</B> Platform administrator may have configure a max frequency that you cannot exceed",
+      "type": "string"
     }
   },
   "required": [
     "url"
-  ]
+  ],
+  "if": {
+    "properties": {
+      "autoFetch": { "const": true }
+    }
+  },
+  "then": { "required": ["fetchCron"] }
 }
