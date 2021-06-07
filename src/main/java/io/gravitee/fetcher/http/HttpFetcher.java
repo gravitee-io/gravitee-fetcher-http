@@ -22,15 +22,13 @@ import io.gravitee.fetcher.api.Fetcher;
 import io.gravitee.fetcher.api.FetcherConfiguration;
 import io.gravitee.fetcher.api.FetcherException;
 import io.gravitee.fetcher.api.Resource;
-import io.gravitee.fetcher.http.vertx.VertxCompletableFuture;
 import io.gravitee.node.api.Node;
 import io.gravitee.node.api.utils.NodeUtils;
+import io.vertx.core.Handler;
+import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
-import io.vertx.core.http.HttpClient;
-import io.vertx.core.http.HttpClientOptions;
-import io.vertx.core.http.HttpClientRequest;
-import io.vertx.core.http.HttpMethod;
+import io.vertx.core.http.*;
 import io.vertx.core.net.ProxyOptions;
 import io.vertx.core.net.ProxyType;
 import org.slf4j.Logger;
@@ -105,7 +103,7 @@ public class HttpFetcher implements Fetcher {
         }
 
         try {
-            Buffer buffer = fetchContent().join();
+            Buffer buffer = fetchContent().get();
             if (buffer == null) {
                 throw new FetcherException("Unable to fetch Http content '" + httpFetcherConfiguration.getUrl() + "': no content", null);
             }
@@ -123,7 +121,7 @@ public class HttpFetcher implements Fetcher {
     }
 
     private CompletableFuture<Buffer> fetchContent() {
-        CompletableFuture<Buffer> future = new VertxCompletableFuture<>(vertx);
+        Promise<Buffer> promise = Promise.promise();
 
         URI requestUri = URI.create(httpFetcherConfiguration.getUrl());
         boolean ssl = HTTPS_SCHEME.equalsIgnoreCase(requestUri.getScheme());
@@ -162,54 +160,75 @@ public class HttpFetcher implements Fetcher {
             String relativeUri = (requestUri.getRawQuery() == null) ? requestUri.getRawPath() :
                     requestUri.getRawPath() + '?' + requestUri.getRawQuery();
 
-            HttpClientRequest request = httpClient.request(
-                    HttpMethod.GET,
-                    port,
-                    requestUri.getHost(),
-                    relativeUri
-            );
-            request.putHeader(HttpHeaders.USER_AGENT, NodeUtils.userAgent(node));
-            request.putHeader("X-Gravitee-Request-Id", UUID.toString(UUID.random()));
+            final RequestOptions reqOptions = new RequestOptions()
+                    .setMethod(HttpMethod.GET)
+                    .setPort(port)
+                    .setHost(requestUri.getHost())
+                    .setURI(relativeUri)
+                    .putHeader(HttpHeaders.USER_AGENT, NodeUtils.userAgent(node))
+                    .putHeader("X-Gravitee-Request-Id", UUID.toString(UUID.random()))
+                    .setTimeout(httpClientTimeout);
 
-            request.setTimeout(httpClientTimeout);
+            httpClient.request(reqOptions)
+                    .onFailure(new Handler<Throwable>() {
+                        @Override
+                        public void handle(Throwable throwable) {
+                            promise.fail(throwable);
 
-            request.handler(response -> {
-                if (response.statusCode() == HttpStatusCode.OK_200) {
-                    response.bodyHandler(buffer -> {
-                        future.complete(buffer);
+                            // Close client
+                            httpClient.close();
+                        }
+                    })
+                    .onSuccess(new Handler<HttpClientRequest>() {
+                        @Override
+                        public void handle(HttpClientRequest request) {
+                            request.response(asyncResponse -> {
+                                if (asyncResponse.failed()) {
+                                    promise.fail(asyncResponse.cause());
 
-                        // Close client
-                        httpClient.close();
+                                    // Close client
+                                    httpClient.close();
+                                } else {
+                                    HttpClientResponse response = asyncResponse.result();
+                                    if (response.statusCode() == HttpStatusCode.OK_200) {
+                                        response.bodyHandler(buffer -> {
+                                            promise.complete(buffer);
+
+                                            // Close client
+                                            httpClient.close();
+                                        });
+                                    } else {
+                                        promise.complete(null);
+
+                                        // Close client
+                                        httpClient.close();
+                                    }
+                                }
+                            });
+
+                            request.exceptionHandler(throwable -> {
+                                try {
+                                    promise.fail(throwable);
+
+                                    // Close client
+                                    httpClient.close();
+                                } catch (IllegalStateException ise) {
+                                    // Do not take care about exception when closing client
+                                }
+                            });
+
+                            request.end();
+                        }
                     });
-                } else {
-                    future.complete(null);
-
-                    // Close client
-                    httpClient.close();
-                }
-            });
-
-            request.exceptionHandler(event -> {
-                try {
-                    future.completeExceptionally(event);
-
-                    // Close client
-                    httpClient.close();
-                } catch (IllegalStateException ise) {
-                    // Do not take care about exception when closing client
-                }
-            });
-
-            request.end();
         } catch (Exception ex) {
             logger.error("Unable to fetch content using HTTP", ex);
-            future.completeExceptionally(ex);
+            promise.fail(ex);
 
             // Close client
             httpClient.close();
         }
 
-        return future;
+        return promise.future().toCompletionStage().toCompletableFuture();
     }
 
     public void setVertx(Vertx vertx) {
