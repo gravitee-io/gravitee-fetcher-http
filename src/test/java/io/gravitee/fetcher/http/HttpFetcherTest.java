@@ -15,22 +15,21 @@
  */
 package io.gravitee.fetcher.http;
 
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
-import io.gravitee.fetcher.api.FetcherException;
-import io.vertx.core.Vertx;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
-import org.springframework.test.util.ReflectionTestUtils;
-
-import java.io.BufferedReader;
-import java.io.InputStream;
-import java.io.InputStreamReader;
-
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
+
+import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import io.gravitee.fetcher.api.FetcherException;
+import io.vertx.core.Vertx;
+import java.io.BufferedReader;
+import java.io.InputStream;
+import java.io.InputStreamReader;
+import org.junit.ClassRule;
+import org.junit.Rule;
+import org.junit.Test;
+import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * @author Nicolas GERAUD (nicolas <AT> graviteesource.com)
@@ -43,10 +42,7 @@ public class HttpFetcherTest {
 
     @Test
     public void shouldGetExistingFile() throws Exception {
-        stubFor(get(urlEqualTo("/resource/to/fetch"))
-                .willReturn(aResponse()
-                        .withStatus(200)
-                        .withBody("Gravitee.io is awesome!")));
+        stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("Gravitee.io is awesome!")));
 
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
         httpFetcherConfiguration.setUrl(wireMockRule.baseUrl() + "/resource/to/fetch");
@@ -68,9 +64,7 @@ public class HttpFetcherTest {
 
     @Test
     public void shouldGetInexistingFile() throws Exception {
-        stubFor(get(urlEqualTo("/resource/to/fetch"))
-                .willReturn(aResponse()
-                        .withStatus(404)));
+        stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(404)));
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
         httpFetcherConfiguration.setUrl(wireMockRule.baseUrl() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
