@@ -16,11 +16,15 @@
 package io.gravitee.fetcher.http;
 
 import io.gravitee.fetcher.api.FetcherConfiguration;
+import lombok.Getter;
+import lombok.Setter;
 
 /**
  * @author Nicolas GERAUD (nicolas.geraud at graviteesource.com)
  * @author GraviteeSource Team
  */
+@Getter
+@Setter
 public class HttpFetcherConfiguration implements FetcherConfiguration {
 
     private String url;
@@ -30,38 +34,4 @@ public class HttpFetcherConfiguration implements FetcherConfiguration {
     private String fetchCron;
 
     private boolean autoFetch = false;
-
-    @Override
-    public String getFetchCron() {
-        return fetchCron;
-    }
-
-    public void setFetchCron(String fetchCron) {
-        this.fetchCron = fetchCron;
-    }
-
-    @Override
-    public boolean isAutoFetch() {
-        return autoFetch;
-    }
-
-    public void setAutoFetch(boolean autoFetch) {
-        this.autoFetch = autoFetch;
-    }
-
-    public String getUrl() {
-        return url;
-    }
-
-    public void setUrl(String url) {
-        this.url = url;
-    }
-
-    public boolean isUseSystemProxy() {
-        return useSystemProxy;
-    }
-
-    public void setUseSystemProxy(boolean useSystemProxy) {
-        this.useSystemProxy = useSystemProxy;
-    }
 }
