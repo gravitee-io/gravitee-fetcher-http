@@ -20,32 +20,31 @@ import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMoc
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.fail;
 
-import com.github.tomakehurst.wiremock.junit.WireMockRule;
+import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.gravitee.fetcher.api.FetcherException;
 import io.vertx.core.Vertx;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
-import org.junit.ClassRule;
-import org.junit.Rule;
-import org.junit.Test;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
 /**
  * @author Nicolas GERAUD (nicolas <AT> graviteesource.com)
  * @author GraviteeSource Team
  */
-public class HttpFetcherTest {
+class HttpFetcherTest {
 
-    @ClassRule
-    public static final WireMockRule wireMockRule = new WireMockRule(wireMockConfig().dynamicPort());
+    @RegisterExtension
+    static WireMockExtension wiremock = WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
     @Test
     public void shouldGetExistingFile() throws Exception {
-        stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("Gravitee.io is awesome!")));
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("Gravitee.io is awesome!")));
 
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
-        httpFetcherConfiguration.setUrl(wireMockRule.baseUrl() + "/resource/to/fetch");
+        httpFetcherConfiguration.setUrl(wiremock.baseUrl() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
         ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", 10_000);
         httpFetcher.setVertx(Vertx.vertx());
@@ -64,9 +63,9 @@ public class HttpFetcherTest {
 
     @Test
     public void shouldGetInexistingFile() throws Exception {
-        stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(404)));
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(404)));
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
-        httpFetcherConfiguration.setUrl(wireMockRule.baseUrl() + "/resource/to/fetch");
+        httpFetcherConfiguration.setUrl(wiremock.baseUrl() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
         httpFetcher.setVertx(Vertx.vertx());
         InputStream is = null;
