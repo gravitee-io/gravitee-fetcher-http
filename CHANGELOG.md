@@ -1,3 +1,10 @@
+## [2.0.2](https://github.com/gravitee-io/gravitee-fetcher-http/compare/2.0.1...2.0.2) (2024-07-15)
+
+
+### Bug Fixes
+
+* remove html from schema ([7695e2a](https://github.com/gravitee-io/gravitee-fetcher-http/commit/7695e2a39e7d9e66b8cce814cc42f5f125be2a68))
+
 ## [2.0.1](https://github.com/gravitee-io/gravitee-fetcher-http/compare/2.0.0...2.0.1) (2024-06-10)
 
 
