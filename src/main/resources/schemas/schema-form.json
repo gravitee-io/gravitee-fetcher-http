@@ -20,7 +20,7 @@
         },
         "fetchCron": {
             "title": "Update frequency",
-            "description": "Define update frequency using Crontab pattern.<BR><B>Note:</B> Platform administrator may have configure a max frequency that you cannot exceed",
+            "description": "Define update frequency using Crontab pattern. Note: Platform administrator may have configure a max frequency that you cannot exceed.",
             "type": "string"
         }
     },
