@@ -1,6 +1,7 @@
 {
+    "$schema": "http://json-schema.org/draft-07/schema#",
     "type": "object",
-    "title": "http",
+    "title": "HTTP",
     "properties": {
         "url": {
             "title": "URL",
@@ -20,7 +21,7 @@
         },
         "fetchCron": {
             "title": "Update frequency",
-            "description": "Define update frequency using Crontab pattern. Note: Platform administrator may have configured a max frequency that you cannot exceed.",
+            "description": "Define update frequency using Crontab pattern. Leaving it empty will not trigger any update. Note: Platform administrator may have configured a max frequency that you cannot exceed.",
             "type": "string",
             "format": "gio-cron",
             "gioConfig": {
@@ -32,11 +33,5 @@
             }
         }
     },
-    "required": ["url"],
-    "if": {
-        "properties": {
-            "autoFetch": { "const": true }
-        }
-    },
-    "then": { "required": ["fetchCron"] }
+    "required": ["url"]
 }
