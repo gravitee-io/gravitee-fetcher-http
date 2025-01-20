@@ -36,7 +36,7 @@
     <properties>
         <gravitee-bom.version>6.0.60</gravitee-bom.version>
         <gravitee-fetcher-api.version>2.1.0</gravitee-fetcher-api.version>
-        <gravitee-node-api.version>4.8.7</gravitee-node-api.version>
+        <gravitee-node-api.version>4.8.9</gravitee-node-api.version>
         <wiremock.version>3.9.1</wiremock.version>
 
         <maven-assembly-plugin.version>3.7.1</maven-assembly-plugin.version>
