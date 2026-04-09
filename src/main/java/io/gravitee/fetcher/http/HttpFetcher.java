@@ -24,7 +24,6 @@ import io.gravitee.fetcher.api.FetcherException;
 import io.gravitee.fetcher.api.Resource;
 import io.gravitee.node.api.Node;
 import io.gravitee.node.api.utils.NodeUtils;
-import io.vertx.core.Handler;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -34,8 +33,7 @@ import io.vertx.core.net.ProxyType;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.support.CronExpression;
@@ -45,9 +43,8 @@ import org.springframework.scheduling.support.CronExpression;
  * @author Nicolas GERAUD (nicolas.geraud at graviteesource.com)
  * @author GraviteeSource Team
  */
+@CustomLog
 public class HttpFetcher implements Fetcher {
-
-    private static final Logger logger = LoggerFactory.getLogger(HttpFetcher.class);
 
     private static final String HTTPS_SCHEME = "https";
 
@@ -137,10 +134,11 @@ public class HttpFetcher implements Fetcher {
         final HttpClientOptions options = new HttpClientOptions()
             .setSsl(ssl)
             .setTrustAll(true)
-            .setMaxPoolSize(1)
             .setKeepAlive(false)
             .setTcpKeepAlive(false)
             .setConnectTimeout(httpClientTimeout);
+
+        final PoolOptions poolOptions = new PoolOptions().setHttp1MaxSize(1);
 
         if (httpFetcherConfiguration.isUseSystemProxy()) {
             ProxyOptions proxyOptions = new ProxyOptions();
@@ -159,7 +157,9 @@ public class HttpFetcher implements Fetcher {
             options.setProxyOptions(proxyOptions);
         }
 
-        final HttpClient httpClient = vertx.createHttpClient(options);
+        final HttpClient httpClient = vertx.createHttpClient(options, poolOptions);
+        // Ensure the HTTP client is closed exactly once when the promise completes, regardless of success or failure
+        promise.future().onComplete(ar -> httpClient.close());
 
         final int port = requestUri.getPort() != -1 ? requestUri.getPort() : (HTTPS_SCHEME.equals(requestUri.getScheme()) ? 443 : 80);
 
@@ -179,66 +179,30 @@ public class HttpFetcher implements Fetcher {
 
             httpClient
                 .request(reqOptions)
-                .onFailure(
-                    new Handler<Throwable>() {
-                        @Override
-                        public void handle(Throwable throwable) {
+                .onFailure(promise::fail)
+                .onSuccess(request -> {
+                    request.exceptionHandler(throwable -> {
+                        try {
                             promise.fail(throwable);
-
-                            // Close client
-                            httpClient.close();
+                        } catch (IllegalStateException ise) {
+                            // Promise already completed
                         }
-                    }
-                )
-                .onSuccess(
-                    new Handler<HttpClientRequest>() {
-                        @Override
-                        public void handle(HttpClientRequest request) {
-                            request.response(asyncResponse -> {
-                                if (asyncResponse.failed()) {
-                                    promise.fail(asyncResponse.cause());
+                    });
 
-                                    // Close client
-                                    httpClient.close();
-                                } else {
-                                    HttpClientResponse response = asyncResponse.result();
-                                    if (response.statusCode() == HttpStatusCode.OK_200) {
-                                        response.bodyHandler(buffer -> {
-                                            promise.complete(buffer);
-
-                                            // Close client
-                                            httpClient.close();
-                                        });
-                                    } else {
-                                        promise.complete(null);
-
-                                        // Close client
-                                        httpClient.close();
-                                    }
-                                }
-                            });
-
-                            request.exceptionHandler(throwable -> {
-                                try {
-                                    promise.fail(throwable);
-
-                                    // Close client
-                                    httpClient.close();
-                                } catch (IllegalStateException ise) {
-                                    // Do not take care about exception when closing client
-                                }
-                            });
-
-                            request.end();
-                        }
-                    }
-                );
+                    request
+                        .send()
+                        .onFailure(promise::fail)
+                        .onSuccess(response -> {
+                            if (response.statusCode() == HttpStatusCode.OK_200) {
+                                response.bodyHandler(promise::complete);
+                            } else {
+                                promise.complete(null);
+                            }
+                        });
+                });
         } catch (Exception ex) {
-            logger.error("Unable to fetch content using HTTP", ex);
+            log.error("Unable to fetch content using HTTP", ex);
             promise.fail(ex);
-
-            // Close client
-            httpClient.close();
         }
 
         return promise.future().toCompletionStage().toCompletableFuture();
