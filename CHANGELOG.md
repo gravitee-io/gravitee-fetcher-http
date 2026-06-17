@@ -1,3 +1,20 @@
+# [3.0.0](https://github.com/gravitee-io/gravitee-fetcher-http/compare/2.1.1...3.0.0) (2026-06-17)
+
+
+### Bug Fixes
+
+* upgrade gravitee orb ([a7b247d](https://github.com/gravitee-io/gravitee-fetcher-http/commit/a7b247d08a6834eabac2a5bcc4738ff303230766))
+
+
+### Features
+
+* upgrade to vertx 5 ([60e8285](https://github.com/gravitee-io/gravitee-fetcher-http/commit/60e8285296aa7a9d09d3e49906bd38597643e2b7))
+
+
+### BREAKING CHANGES
+
+* upgrade to vertx5
+
 ## [2.1.1](https://github.com/gravitee-io/gravitee-fetcher-http/compare/2.1.0...2.1.1) (2024-09-11)
 
 
