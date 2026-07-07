@@ -34,6 +34,7 @@ import io.vertx.core.net.ProxyType;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 import lombok.CustomLog;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.beans.factory.annotation.Value;
@@ -117,7 +118,9 @@ public class HttpFetcher implements Fetcher {
             resource.setContent(new ByteArrayInputStream(buffer.getBytes()));
             return resource;
         } catch (Exception ex) {
-            throw new FetcherException("Unable to fetch Http content (" + ex.getMessage() + ")", ex);
+            Throwable cause = ex instanceof ExecutionException && ex.getCause() != null ? ex.getCause() : ex;
+            log.error(cause.getMessage(), cause);
+            throw new FetcherException("Unable to fetch Http content (" + cause.getMessage() + ")", cause);
         }
     }
 
@@ -191,7 +194,6 @@ public class HttpFetcher implements Fetcher {
                 .onSuccess(promise::complete)
                 .onFailure(promise::fail);
         } catch (Exception ex) {
-            log.error("Unable to fetch content using HTTP", ex);
             promise.fail(ex);
         }
 
