@@ -24,6 +24,7 @@ import io.gravitee.fetcher.api.FetcherException;
 import io.gravitee.fetcher.api.Resource;
 import io.gravitee.node.api.Node;
 import io.gravitee.node.api.utils.NodeUtils;
+import io.vertx.core.Future;
 import io.vertx.core.Promise;
 import io.vertx.core.Vertx;
 import io.vertx.core.buffer.Buffer;
@@ -179,27 +180,16 @@ public class HttpFetcher implements Fetcher {
 
             httpClient
                 .request(reqOptions)
-                .onFailure(promise::fail)
-                .onSuccess(request -> {
-                    request.exceptionHandler(throwable -> {
-                        try {
-                            promise.fail(throwable);
-                        } catch (IllegalStateException ise) {
-                            // Promise already completed
-                        }
-                    });
-
-                    request
-                        .send()
-                        .onFailure(promise::fail)
-                        .onSuccess(response -> {
-                            if (response.statusCode() == HttpStatusCode.OK_200) {
-                                response.bodyHandler(promise::complete);
-                            } else {
-                                promise.complete(null);
-                            }
-                        });
-                });
+                .compose(HttpClientRequest::send)
+                .compose(response -> {
+                    if (response.statusCode() == HttpStatusCode.OK_200) {
+                        return response.body();
+                    } else {
+                        return Future.succeededFuture();
+                    }
+                })
+                .onSuccess(promise::complete)
+                .onFailure(promise::fail);
         } catch (Exception ex) {
             log.error("Unable to fetch content using HTTP", ex);
             promise.fail(ex);
