@@ -191,7 +191,17 @@ public class HttpFetcher implements Fetcher {
                     if (response.statusCode() == HttpStatusCode.OK_200) {
                         return response.body();
                     } else {
-                        return Future.succeededFuture();
+                        return Future.failedFuture(
+                            new FetcherException(
+                                "Unable to fetch '" +
+                                    httpFetcherConfiguration.getUrl() +
+                                    "'. Status code: " +
+                                    response.statusCode() +
+                                    ". Message: " +
+                                    response.statusMessage(),
+                                null
+                            )
+                        );
                     }
                 })
                 .onSuccess(promise::complete)
