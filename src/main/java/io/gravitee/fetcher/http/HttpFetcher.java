@@ -118,6 +118,10 @@ public class HttpFetcher implements Fetcher {
             final Resource resource = new Resource();
             resource.setContent(new ByteArrayInputStream(buffer.getBytes()));
             return resource;
+        } catch (InterruptedException ie) {
+            Thread.currentThread().interrupt();
+            log.error("Fetch of Http content '{}' has been interrupted", httpFetcherConfiguration.getUrl(), ie);
+            throw new FetcherException("Unable to fetch Http content (" + ie.getMessage() + ")", ie);
         } catch (Exception ex) {
             Throwable cause = ex instanceof ExecutionException && ex.getCause() != null ? ex.getCause() : ex;
             log.error(cause.getMessage(), cause);
