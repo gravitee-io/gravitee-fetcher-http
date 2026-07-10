@@ -1,3 +1,14 @@
+## [3.0.1](https://github.com/gravitee-io/gravitee-fetcher-http/compare/3.0.0...3.0.1) (2026-07-10)
+
+
+### Bug Fixes
+
+* fail fetch when the connection stalls while reading the response ([a496aaa](https://github.com/gravitee-io/gravitee-fetcher-http/commit/a496aaabca4675b6ab082354fa94e57f2337fbc2))
+* fail fetch with status details on non-200 responses ([ae1fae4](https://github.com/gravitee-io/gravitee-fetcher-http/commit/ae1fae47497816c0e4830b3efaa069d790768368))
+* log fetch errors once and unwrap the async exception wrapper ([86c2001](https://github.com/gravitee-io/gravitee-fetcher-http/commit/86c2001b0333c1fd573e9d5ce26491cef295e377))
+* propagate response stream errors when reading the fetched body ([3a01091](https://github.com/gravitee-io/gravitee-fetcher-http/commit/3a01091efce345822b94f11399acac29045e47d1))
+* restore interrupt status when fetch is interrupted ([708f5ee](https://github.com/gravitee-io/gravitee-fetcher-http/commit/708f5eea81fe5045cb7623dad05f24a64269baea))
+
 # [3.0.0](https://github.com/gravitee-io/gravitee-fetcher-http/compare/2.1.1...3.0.0) (2026-06-17)
 
 
