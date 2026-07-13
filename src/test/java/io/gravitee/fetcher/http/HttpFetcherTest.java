@@ -18,15 +18,22 @@ package io.gravitee.fetcher.http;
 import static com.github.tomakehurst.wiremock.client.WireMock.*;
 import static com.github.tomakehurst.wiremock.core.WireMockConfiguration.wireMockConfig;
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.assertj.core.api.Assertions.fail;
 
+import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.gravitee.fetcher.api.FetcherException;
 import io.vertx.core.Vertx;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterEach;
+import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.Timeout;
 import org.junit.jupiter.api.extension.RegisterExtension;
 import org.springframework.test.util.ReflectionTestUtils;
 
@@ -39,6 +46,18 @@ class HttpFetcherTest {
     @RegisterExtension
     static WireMockExtension wiremock = WireMockExtension.newInstance().options(wireMockConfig().dynamicPort()).build();
 
+    private Vertx vertx;
+
+    @BeforeEach
+    void setUp() {
+        vertx = Vertx.vertx();
+    }
+
+    @AfterEach
+    void tearDown() throws Exception {
+        vertx.close().toCompletionStage().toCompletableFuture().get(10, TimeUnit.SECONDS);
+    }
+
     @Test
     public void shouldGetExistingFile() throws Exception {
         wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("Gravitee.io is awesome!")));
@@ -47,7 +66,7 @@ class HttpFetcherTest {
         httpFetcherConfiguration.setUrl(wiremock.baseUrl() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
         ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", 10_000);
-        httpFetcher.setVertx(Vertx.vertx());
+        httpFetcher.setVertx(vertx);
         InputStream is = httpFetcher.fetch().getContent();
         assertThat(is).isNotNull();
         BufferedReader br = new BufferedReader(new InputStreamReader(is));
@@ -67,7 +86,7 @@ class HttpFetcherTest {
         HttpFetcherConfiguration httpFetcherConfiguration = new HttpFetcherConfiguration();
         httpFetcherConfiguration.setUrl(wiremock.baseUrl() + "/resource/to/fetch");
         HttpFetcher httpFetcher = new HttpFetcher(httpFetcherConfiguration);
-        httpFetcher.setVertx(Vertx.vertx());
+        httpFetcher.setVertx(vertx);
         InputStream is = null;
         try {
             is = httpFetcher.fetch().getContent();
@@ -76,5 +95,60 @@ class HttpFetcherTest {
             assertThat(fetcherException.getMessage()).contains("Unable to fetch");
             assertThat(is).isNull();
         }
+    }
+
+    @Test
+    void should_fail_with_status_details_when_response_is_not_200() {
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(500)));
+
+        HttpFetcher httpFetcher = fetcher(10_000);
+
+        assertThatThrownBy(httpFetcher::fetch).isInstanceOf(FetcherException.class).hasMessageContaining("Status code: 500");
+    }
+
+    @Test
+    void should_expose_original_cause_instead_of_async_wrapper_when_fetch_fails() {
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(404)));
+
+        HttpFetcher httpFetcher = fetcher(10_000);
+
+        assertThatThrownBy(httpFetcher::fetch)
+            .isInstanceOf(FetcherException.class)
+            .hasCauseInstanceOf(FetcherException.class)
+            .cause()
+            .isNotInstanceOf(ExecutionException.class);
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    void should_fail_fast_when_connection_is_closed_while_reading_response() {
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withFault(Fault.RANDOM_DATA_THEN_CLOSE)));
+
+        HttpFetcher httpFetcher = fetcher(10_000);
+
+        assertThatThrownBy(httpFetcher::fetch).isInstanceOf(FetcherException.class);
+    }
+
+    @Test
+    @Timeout(value = 10, unit = TimeUnit.SECONDS)
+    void should_fail_when_connection_stalls_while_reading_body() {
+        wiremock.stubFor(
+            get(urlEqualTo("/resource/to/fetch")).willReturn(
+                aResponse().withStatus(200).withBody("Gravitee.io is awesome!").withChunkedDribbleDelay(20, 20_000)
+            )
+        );
+
+        HttpFetcher httpFetcher = fetcher(500);
+
+        assertThatThrownBy(httpFetcher::fetch).isInstanceOf(FetcherException.class);
+    }
+
+    private HttpFetcher fetcher(int timeoutMs) {
+        HttpFetcherConfiguration configuration = new HttpFetcherConfiguration();
+        configuration.setUrl(wiremock.baseUrl() + "/resource/to/fetch");
+        HttpFetcher httpFetcher = new HttpFetcher(configuration);
+        ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", timeoutMs);
+        httpFetcher.setVertx(vertx);
+        return httpFetcher;
     }
 }
