@@ -15,3 +15,14 @@ This plugin allow Gravitee.io to fetch content from an URL.
 It's primarily used to fetch documentation.
 
 **Authentications is currently not supported**.
+
+== Compatibility matrix
+
+|===
+| Plugin version | APIM             | Java version
+
+| 3.x            | 4.12.x to latest | 21
+| 2.x            | 4.9.x to 4.11.x  | 17
+|===
+
+The *Java version* column is the bytecode level of the latest release of each line, which sets the minimum runtime able to load the artifact.
