@@ -33,7 +33,9 @@ import io.vertx.core.net.ProxyOptions;
 import io.vertx.core.net.ProxyType;
 import java.io.ByteArrayInputStream;
 import java.net.URI;
+import java.util.Map;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import lombok.CustomLog;
@@ -50,6 +52,16 @@ import org.springframework.scheduling.support.CronExpression;
 public class HttpFetcher implements Fetcher {
 
     private static final String HTTPS_SCHEME = "https";
+
+    /**
+     * Vert.x holds on to every client it creates until the Vert.x instance itself is closed, so a client per fetch
+     * would accumulate for as long as the node runs. A fetcher is instantiated per fetch, hence a static cache keyed
+     * by everything that shapes the client options.
+     */
+    private static final Map<ClientKey, HttpClient> CLIENTS = new ConcurrentHashMap<>();
+
+    // Shared by every fetch of the node: a single connection would serialise them.
+    private static final int MAX_CONNECTIONS = 20;
 
     private final HttpFetcherConfiguration httpFetcherConfiguration;
 
@@ -140,37 +152,29 @@ public class HttpFetcher implements Fetcher {
         URI requestUri = URI.create(httpFetcherConfiguration.getUrl());
         boolean ssl = HTTPS_SCHEME.equalsIgnoreCase(requestUri.getScheme());
 
-        final HttpClientOptions options = new HttpClientOptions()
-            .setSsl(ssl)
-            .setTrustAll(true)
-            .setKeepAlive(false)
-            .setTcpKeepAlive(false)
-            .setConnectTimeout(httpClientTimeout)
-            .setIdleTimeout(httpClientTimeout)
-            .setIdleTimeoutUnit(TimeUnit.MILLISECONDS);
-
-        final PoolOptions poolOptions = new PoolOptions().setHttp1MaxSize(1);
-
+        Proxy proxy = null;
         if (httpFetcherConfiguration.isUseSystemProxy()) {
-            ProxyOptions proxyOptions = new ProxyOptions();
-            proxyOptions.setType(ProxyType.valueOf(httpClientProxyType));
-            if (HTTPS_SCHEME.equals(requestUri.getScheme())) {
-                proxyOptions.setHost(httpClientProxyHttpsHost);
-                proxyOptions.setPort(httpClientProxyHttpsPort);
-                proxyOptions.setUsername(httpClientProxyHttpsUsername);
-                proxyOptions.setPassword(httpClientProxyHttpsPassword);
-            } else {
-                proxyOptions.setHost(httpClientProxyHttpHost);
-                proxyOptions.setPort(httpClientProxyHttpPort);
-                proxyOptions.setUsername(httpClientProxyHttpUsername);
-                proxyOptions.setPassword(httpClientProxyHttpPassword);
-            }
-            options.setProxyOptions(proxyOptions);
+            proxy = HTTPS_SCHEME.equals(requestUri.getScheme())
+                ? new Proxy(
+                    httpClientProxyType,
+                    httpClientProxyHttpsHost,
+                    httpClientProxyHttpsPort,
+                    httpClientProxyHttpsUsername,
+                    httpClientProxyHttpsPassword
+                )
+                : new Proxy(
+                    httpClientProxyType,
+                    httpClientProxyHttpHost,
+                    httpClientProxyHttpPort,
+                    httpClientProxyHttpUsername,
+                    httpClientProxyHttpPassword
+                );
         }
 
-        final HttpClient httpClient = vertx.createHttpClient(options, poolOptions);
-        // Ensure the HTTP client is closed exactly once when the promise completes, regardless of success or failure
-        promise.future().onComplete(ar -> httpClient.close());
+        final HttpClient httpClient = CLIENTS.computeIfAbsent(
+            new ClientKey(vertx, ssl, httpClientTimeout, proxy),
+            HttpFetcher::buildHttpClient
+        );
 
         final int port = requestUri.getPort() != -1 ? requestUri.getPort() : (HTTPS_SCHEME.equals(requestUri.getScheme()) ? 443 : 80);
 
@@ -216,6 +220,36 @@ public class HttpFetcher implements Fetcher {
 
         return promise.future().toCompletionStage().toCompletableFuture();
     }
+
+    private static HttpClient buildHttpClient(ClientKey key) {
+        final HttpClientOptions options = new HttpClientOptions()
+            .setSsl(key.ssl())
+            .setTrustAll(true)
+            .setKeepAlive(false)
+            .setTcpKeepAlive(false)
+            .setConnectTimeout(key.timeout())
+            .setIdleTimeout(key.timeout())
+            .setIdleTimeoutUnit(TimeUnit.MILLISECONDS);
+
+        final PoolOptions poolOptions = new PoolOptions().setHttp1MaxSize(MAX_CONNECTIONS);
+
+        if (key.proxy() != null) {
+            options.setProxyOptions(
+                new ProxyOptions()
+                    .setType(ProxyType.valueOf(key.proxy().type()))
+                    .setHost(key.proxy().host())
+                    .setPort(key.proxy().port())
+                    .setUsername(key.proxy().username())
+                    .setPassword(key.proxy().password())
+            );
+        }
+
+        return key.vertx().createHttpClient(options, poolOptions);
+    }
+
+    private record Proxy(String type, String host, int port, String username, String password) {}
+
+    private record ClientKey(Vertx vertx, boolean ssl, int timeout, Proxy proxy) {}
 
     public void setVertx(Vertx vertx) {
         this.vertx = vertx;

@@ -25,9 +25,13 @@ import com.github.tomakehurst.wiremock.http.Fault;
 import com.github.tomakehurst.wiremock.junit5.WireMockExtension;
 import io.gravitee.fetcher.api.FetcherException;
 import io.vertx.core.Vertx;
+import io.vertx.core.http.HttpClient;
+import io.vertx.core.internal.VertxInternal;
 import java.io.BufferedReader;
 import java.io.InputStream;
 import java.io.InputStreamReader;
+import java.lang.reflect.Field;
+import java.util.Map;
 import java.util.concurrent.ExecutionException;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterEach;
@@ -141,6 +145,38 @@ class HttpFetcherTest {
         HttpFetcher httpFetcher = fetcher(500);
 
         assertThatThrownBy(httpFetcher::fetch).isInstanceOf(FetcherException.class);
+    }
+
+    @Test
+    void should_reuse_one_http_client_across_fetches() throws Exception {
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("ok")));
+        wiremock.stubFor(get(urlEqualTo("/missing")).willReturn(aResponse().withStatus(404)));
+
+        for (int i = 0; i < 10; i++) {
+            fetcher(10_000).fetch();
+
+            HttpFetcherConfiguration configuration = new HttpFetcherConfiguration();
+            configuration.setUrl(wiremock.baseUrl() + "/missing");
+            HttpFetcher failing = new HttpFetcher(configuration);
+            ReflectionTestUtils.setField(failing, "httpClientTimeout", 10_000);
+            failing.setVertx(vertx);
+            assertThatThrownBy(failing::fetch).isInstanceOf(FetcherException.class);
+        }
+
+        assertThat(registeredHttpClients()).isEqualTo(1);
+    }
+
+    /**
+     * Vert.x keeps every client it creates in the private {@code children} map of its owner's close future, and
+     * only releases them when that owner closes. Counting them is the only way to observe from a test that a
+     * client is retained for the whole life of the node rather than released after the call that created it.
+     */
+    private long registeredHttpClients() throws Exception {
+        Object closeFuture = ((VertxInternal) vertx).closeFuture();
+        Field childrenField = closeFuture.getClass().getDeclaredField("children");
+        childrenField.setAccessible(true);
+        Map<?, ?> children = (Map<?, ?>) childrenField.get(closeFuture);
+        return children == null ? 0 : children.keySet().stream().filter(HttpClient.class::isInstance).count();
     }
 
     private HttpFetcher fetcher(int timeoutMs) {
