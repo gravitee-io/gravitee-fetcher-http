@@ -154,7 +154,7 @@ public class HttpFetcher implements Fetcher {
 
         Proxy proxy = null;
         if (httpFetcherConfiguration.isUseSystemProxy()) {
-            proxy = HTTPS_SCHEME.equals(requestUri.getScheme())
+            proxy = ssl
                 ? new Proxy(
                     httpClientProxyType,
                     httpClientProxyHttpsHost,
@@ -176,7 +176,7 @@ public class HttpFetcher implements Fetcher {
             HttpFetcher::buildHttpClient
         );
 
-        final int port = requestUri.getPort() != -1 ? requestUri.getPort() : (HTTPS_SCHEME.equals(requestUri.getScheme()) ? 443 : 80);
+        final int port = requestUri.getPort() != -1 ? requestUri.getPort() : (ssl ? 443 : 80);
 
         try {
             String relativeUri = (requestUri.getRawQuery() == null)
