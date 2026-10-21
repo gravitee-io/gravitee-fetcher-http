@@ -247,7 +247,13 @@ public class HttpFetcher implements Fetcher {
         return key.vertx().createHttpClient(options, poolOptions);
     }
 
-    private record Proxy(String type, String host, int port, String username, String password) {}
+    private record Proxy(String type, String host, int port, String username, String password) {
+        // Part of the cache key: never print the password.
+        @Override
+        public String toString() {
+            return "Proxy[type=" + type + ", host=" + host + ", port=" + port + ", username=" + username + ", password=***]";
+        }
+    }
 
     private record ClientKey(Vertx vertx, boolean ssl, int timeout, Proxy proxy) {}
 
