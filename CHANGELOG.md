@@ -1,3 +1,13 @@
+## [3.0.2](https://github.com/gravitee-io/gravitee-fetcher-http/compare/3.0.1...3.0.2) (2026-10-21)
+
+
+### Bug Fixes
+
+* hide the proxy password from the client cache key and test the key ([00738b4](https://github.com/gravitee-io/gravitee-fetcher-http/commit/00738b4c786377993b6615593446ff0863d3f7df))
+* pick the HTTPS proxy and port for any case of the https scheme ([2f92a03](https://github.com/gravitee-io/gravitee-fetcher-http/commit/2f92a0348ba5b52303fbec3a7a58013c10ada47f))
+* reset the request of a non-200 response to free its pooled connection ([eaf5254](https://github.com/gravitee-io/gravitee-fetcher-http/commit/eaf52549265520dd73b9ee9c50e20f6510a86af2))
+* reuse one Vert.x HTTP client across fetches ([3538623](https://github.com/gravitee-io/gravitee-fetcher-http/commit/3538623a96ecce0456b58ec09d97a9d84f6617db))
+
 ## [3.0.1](https://github.com/gravitee-io/gravitee-fetcher-http/compare/3.0.0...3.0.1) (2026-07-10)
 
 
