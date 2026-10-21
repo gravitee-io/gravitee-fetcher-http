@@ -154,16 +154,36 @@ class HttpFetcherTest {
 
         for (int i = 0; i < 10; i++) {
             fetcher(10_000).fetch();
-
-            HttpFetcherConfiguration configuration = new HttpFetcherConfiguration();
-            configuration.setUrl(wiremock.baseUrl() + "/missing");
-            HttpFetcher failing = new HttpFetcher(configuration);
-            ReflectionTestUtils.setField(failing, "httpClientTimeout", 10_000);
-            failing.setVertx(vertx);
-            assertThatThrownBy(failing::fetch).isInstanceOf(FetcherException.class);
+            assertThatThrownBy(fetcher("/missing", 10_000)::fetch).isInstanceOf(FetcherException.class);
         }
 
         assertThat(registeredHttpClients()).isEqualTo(1);
+    }
+
+    @Test
+    void should_not_share_a_client_between_fetches_with_and_without_system_proxy() throws Exception {
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("ok")));
+        fetcher(10_000).fetch();
+
+        HttpFetcher proxied = fetcher("/resource/to/fetch", 10_000);
+        ((HttpFetcherConfiguration) proxied.getConfiguration()).setUseSystemProxy(true);
+        ReflectionTestUtils.setField(proxied, "httpClientProxyType", "HTTP");
+        ReflectionTestUtils.setField(proxied, "httpClientProxyHttpHost", "localhost");
+        // Nothing listens there: the fetch fails, but only after its client has been built.
+        ReflectionTestUtils.setField(proxied, "httpClientProxyHttpPort", 1);
+        assertThatThrownBy(proxied::fetch).isInstanceOf(FetcherException.class);
+
+        assertThat(registeredHttpClients()).isEqualTo(2);
+    }
+
+    @Test
+    void should_not_share_a_client_between_fetches_with_different_timeouts() throws Exception {
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("ok")));
+
+        fetcher(10_000).fetch();
+        fetcher(5_000).fetch();
+
+        assertThat(registeredHttpClients()).isEqualTo(2);
     }
 
     /**
@@ -180,8 +200,12 @@ class HttpFetcherTest {
     }
 
     private HttpFetcher fetcher(int timeoutMs) {
+        return fetcher("/resource/to/fetch", timeoutMs);
+    }
+
+    private HttpFetcher fetcher(String path, int timeoutMs) {
         HttpFetcherConfiguration configuration = new HttpFetcherConfiguration();
-        configuration.setUrl(wiremock.baseUrl() + "/resource/to/fetch");
+        configuration.setUrl(wiremock.baseUrl() + path);
         HttpFetcher httpFetcher = new HttpFetcher(configuration);
         ReflectionTestUtils.setField(httpFetcher, "httpClientTimeout", timeoutMs);
         httpFetcher.setVertx(vertx);
