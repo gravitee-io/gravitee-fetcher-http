@@ -213,6 +213,24 @@ class HttpFetcherTest {
     }
 
     @Test
+    @Timeout(value = 30, unit = TimeUnit.SECONDS)
+    void should_release_the_connection_of_a_non_200_response_without_waiting_for_its_body() throws Exception {
+        wiremock.stubFor(
+            get(urlEqualTo("/slow-error")).willReturn(
+                aResponse().withStatus(500).withBody("x".repeat(200_000)).withChunkedDribbleDelay(100, 20_000)
+            )
+        );
+        wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("ok")));
+
+        // Enough failures to take every connection of the pool if their bodies kept them busy.
+        for (int i = 0; i < 20; i++) {
+            assertThatThrownBy(fetcher("/slow-error", 3_000)::fetch).isInstanceOf(FetcherException.class);
+        }
+
+        assertThat(fetcher(3_000).fetch().getContent()).isNotNull();
+    }
+
+    @Test
     void should_not_share_a_client_between_fetches_with_different_timeouts() throws Exception {
         wiremock.stubFor(get(urlEqualTo("/resource/to/fetch")).willReturn(aResponse().withStatus(200).withBody("ok")));
 

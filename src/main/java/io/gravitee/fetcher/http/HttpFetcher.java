@@ -199,6 +199,9 @@ public class HttpFetcher implements Fetcher {
                     if (response.statusCode() == HttpStatusCode.OK_200) {
                         return response.body();
                     } else {
+                        // The body is not read: reset the request so a slowly streamed error page does not keep the
+                        // connection, which the shared pool needs back.
+                        response.request().reset();
                         return Future.failedFuture(
                             new FetcherException(
                                 "Unable to fetch '" +
