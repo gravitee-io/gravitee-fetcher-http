@@ -34,7 +34,7 @@
     <name>Gravitee.io APIM - Fetcher - HTTP</name>
 
     <properties>
-        <gravitee-bom.version>9.0.11</gravitee-bom.version>
+        <gravitee-bom.version>9.0.12</gravitee-bom.version>
         <gravitee-fetcher-api.version>2.1.0</gravitee-fetcher-api.version>
         <gravitee-node.version>9.20.1</gravitee-node.version>
         <wiremock.version>3.13.2</wiremock.version>
